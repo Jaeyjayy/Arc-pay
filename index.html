@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArcPay — USDC Payments on Arc</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #080c10;
+      --surface: #0d1318;
+      --surface2: #111920;
+      --border: #1e2d3a;
+      --accent: #00d4ff;
+      --accent2: #0af0a0;
+      --accent3: #2563eb;
+      --text: #e8f4f8;
+      --muted: #4a6475;
+      --danger: #ff4466;
+      --success: #00e887;
+      --usdc-blue: #2775ca;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* === GRID BACKGROUND === */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* === GLOW ORBS === */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(100px);
+      opacity: 0.12;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .orb-1 { width: 500px; height: 500px; background: var(--accent); top: -150px; right: -100px; }
+    .orb-2 { width: 400px; height: 400px; background: var(--accent2); bottom: -100px; left: -100px; }
+    .orb-3 { width: 300px; height: 300px; background: var(--usdc-blue); top: 40%; left: 30%; }
+
+    /* === LAYOUT === */
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 40px 20px 80px;
+    }
+
+    /* === HEADER === */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 48px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 800;
+      color: #000;
+      font-family: 'Space Mono', monospace;
+    }
+
+    .logo-text {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-text span {
+      color: var(--accent);
+    }
+
+    .network-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 12px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--accent2);
+    }
+
+    .network-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent2);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* === WALLET SECTION === */
+    .wallet-section {
+      margin-bottom: 32px;
+    }
+
+    #connectBtn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--accent3), var(--accent));
+      border: none;
+      border-radius: 14px;
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.3px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #connectBtn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    #connectBtn:hover::before { opacity: 1; }
+    #connectBtn:hover { transform: translateY(-1px); box-shadow: 0 8px 30px rgba(0,212,255,0.25); }
+    #connectBtn:active { transform: translateY(0); }
+    #connectBtn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .wallet-info {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 20px;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .wallet-info.visible { display: flex; }
+
+    .wallet-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent3), var(--accent2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .wallet-details { flex: 1; min-width: 0; }
+
+    .wallet-address {
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .wallet-balance {
+      font-size: 12px;
+      color: var(--accent2);
+      margin-top: 2px;
+      font-family: 'Space Mono', monospace;
+    }
+
+    .disconnect-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 11px;
+      font-family: 'Space Mono', monospace;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .disconnect-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+    /* === WRONG NETWORK BANNER === */
+    .network-warning {
+      display: none;
+      background: rgba(255,68,102,0.1);
+      border: 1px solid rgba(255,68,102,0.3);
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-bottom: 24px;
+      font-size: 13px;
+      color: var(--danger);
+      gap: 10px;
+      align-items: center;
+    }
+    .network-warning.visible { display: flex; }
+
+    #switchNetworkBtn {
+      margin-left: auto;
+      background: var(--danger);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      padding: 6px 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.2s;
+    }
+    #switchNetworkBtn:hover { opacity: 0.85; }
+
+    /* === CARD === */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0.4;
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title::before {
+      content: '';
+      display: inline-block;
+      width: 16px;
+      height: 2px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+
+    /* === FORM === */
+    .field { margin-bottom: 20px; }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      font-family: 'Space Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      -moz-appearance: textfield;
+    }
+
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,212,255,0.08);
+    }
+
+    input::placeholder { color: var(--muted); }
+
+    .input-suffix {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--usdc-blue);
+      font-weight: 700;
+    }
+
+    .usdc-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--usdc-blue);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    /* === QUICK AMOUNTS === */
+    .quick-amounts {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .quick-btn {
+      flex: 1;
+      padding: 7px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+    }
+
+    .quick-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(0,212,255,0.05);
+    }
+
+    /* === MEMO === */
+    textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      outline: none;
+      resize: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      height: 80px;
+    }
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,212,255,0.08);
+    }
+    textarea::placeholder { color: var(--muted); }
+
+    /* === SUMMARY === */
+    .summary {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+      font-size: 13px;
+    }
+
+    .summary-row:not(:last-child) {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      margin-bottom: 5px;
+    }
+
+    .summary-label { color: var(--muted); font-family: 'Space Mono', monospace; font-size: 11px; }
+    .summary-value { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--text); }
+    .summary-value.accent { color: var(--accent2); }
+    .summary-value.free { color: var(--success); font-size: 11px; }
+
+    /* === SEND BUTTON === */
+    #sendBtn {
+      width: 100%;
+      padding: 18px;
+      background: linear-gradient(135deg, #00c4f0, var(--accent2));
+      border: none;
+      border-radius: 14px;
+      color: #000;
+      font-family: 'Syne', sans-serif;
+      font-size: 17px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.5px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #sendBtn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(0,212,255,0.3);
+    }
+
+    #sendBtn:active:not(:disabled) { transform: translateY(0); }
+
+    #sendBtn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      background: var(--surface2);
+      color: var(--muted);
+    }
+
+    .btn-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(0,0,0,0.3);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* === STATUS === */
+    .status-box {
+      display: none;
+      border-radius: 14px;
+      padding: 20px;
+      margin-top: 16px;
+      animation: fadeIn 0.3s ease;
+    }
+    .status-box.visible { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .status-box.success {
+      background: rgba(0,232,135,0.08);
+      border: 1px solid rgba(0,232,135,0.3);
+    }
+
+    .status-box.error {
+      background: rgba(255,68,102,0.08);
+      border: 1px solid rgba(255,68,102,0.3);
+    }
+
+    .status-box.pending {
+      background: rgba(0,212,255,0.08);
+      border: 1px solid rgba(0,212,255,0.3);
+    }
+
+    .status-icon { font-size: 28px; margin-bottom: 10px; }
+
+    .status-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .status-box.success .status-title { color: var(--success); }
+    .status-box.error .status-title { color: var(--danger); }
+    .status-box.pending .status-title { color: var(--accent); }
+
+    .status-msg {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+      word-break: break-all;
+    }
+
+    .tx-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 12px;
+      padding: 8px 14px;
+      background: rgba(0,232,135,0.12);
+      border: 1px solid rgba(0,232,135,0.3);
+      border-radius: 8px;
+      color: var(--success);
+      text-decoration: none;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      transition: background 0.2s;
+    }
+    .tx-link:hover { background: rgba(0,232,135,0.2); }
+
+    /* === FOOTER === */
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    .built-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      padding: 6px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 10px;
+    }
+
+    /* === TOAST === */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 20px;
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--text);
+      z-index: 100;
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { border-color: var(--success); color: var(--success); }
+    .toast.error { border-color: var(--danger); color: var(--danger); }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 480px) {
+      .container { padding: 24px 16px 60px; }
+      .card { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">A</div>
+      <div class="logo-text">Arc<span>Pay</span></div>
+    </div>
+    <div class="network-badge">
+      <div class="network-dot"></div>
+      Arc Testnet
+    </div>
+  </header>
+
+  <!-- WALLET -->
+  <div class="wallet-section">
+    <button id="connectBtn" onclick="connectWallet()">⚡ Connect Wallet</button>
+    <div class="wallet-info" id="walletInfo">
+      <div class="wallet-avatar">💼</div>
+      <div class="wallet-details">
+        <div class="wallet-address" id="walletAddress">—</div>
+        <div class="wallet-balance" id="walletBalance">Balance: —</div>
+      </div>
+      <button class="disconnect-btn" onclick="disconnectWallet()">Disconnect</button>
+    </div>
+  </div>
+
+  <!-- WRONG NETWORK WARNING -->
+  <div class="network-warning" id="networkWarning">
+    ⚠️ Wrong network detected. Switch to Arc Testnet.
+    <button id="switchNetworkBtn" onclick="switchToArc()">Switch Network</button>
+  </div>
+
+  <!-- PAYMENT CARD -->
+  <div class="card">
+    <div class="card-title">Send USDC</div>
+
+    <div class="field">
+      <label>Recipient Address</label>
+      <div class="input-wrap">
+        <input type="text" id="recipient" placeholder="0x..." autocomplete="off" oninput="updateSummary()" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Amount</label>
+      <div class="input-wrap">
+        <input type="number" id="amount" placeholder="0.00" min="0" step="any" oninput="updateSummary()" style="padding-right: 80px;" />
+        <div class="input-suffix">
+          <div class="usdc-dot">$</div>
+          USDC
+        </div>
+      </div>
+      <div class="quick-amounts">
+        <div class="quick-btn" onclick="setAmount(1)">1</div>
+        <div class="quick-btn" onclick="setAmount(5)">5</div>
+        <div class="quick-btn" onclick="setAmount(10)">10</div>
+        <div class="quick-btn" onclick="setAmount(50)">50</div>
+        <div class="quick-btn" onclick="setAmount(100)">100</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Memo (Optional)</label>
+      <textarea id="memo" placeholder="What's this payment for?"></textarea>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="summary" id="summary" style="display:none;">
+      <div class="summary-row">
+        <span class="summary-label">To</span>
+        <span class="summary-value" id="summaryTo">—</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">Amount</span>
+        <span class="summary-value accent" id="summaryAmount">—</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">Gas Fee</span>
+        <span class="summary-value free">✓ Paid in USDC (Arc)</span>
+      </div>
+    </div>
+
+    <button id="sendBtn" onclick="sendPayment()" disabled>Connect wallet to send</button>
+
+    <!-- STATUS -->
+    <div class="status-box" id="statusBox">
+      <div class="status-icon" id="statusIcon"></div>
+      <div class="status-title" id="statusTitle"></div>
+      <div class="status-msg" id="statusMsg"></div>
+      <div id="txLinkWrap"></div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    Built on <a href="https://arc.io" target="_blank">Arc Testnet</a> · Powered by <a href="https://circle.com" target="_blank">Circle</a> USDC<br/>
+    <div class="built-badge">⚡ ArcPay · Open Source on GitHub</div>
+  </footer>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ============================================================
+  // ARC TESTNET CONFIG
+  // ============================================================
+  const ARC_CHAIN_ID = '0x4ED'; // 1261 in hex
+  const ARC_NETWORK = {
+    chainId: ARC_CHAIN_ID,
+    chainName: 'Arc Testnet',
+    nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
+    rpcUrls: ['https://rpc.testnet.arc.io'],
+    blockExplorerUrls: ['https://testnet.arcscan.app']
+  };
+
+  // USDC contract on Arc testnet (placeholder — update when Circle publishes mainnet address)
+  const USDC_ADDRESS = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
+
+  const USDC_ABI = [
+    'function transfer(address to, uint256 amount) returns (bool)',
+    'function balanceOf(address account) view returns (uint256)',
+    'function decimals() view returns (uint8)'
+  ];
+
+  // ============================================================
+  // STATE
+  // ============================================================
+  let provider = null;
+  let signer = null;
+  let userAddress = null;
+  let isConnected = false;
+  let isCorrectNetwork = false;
+
+  // ============================================================
+  // WALLET CONNECT
+  // ============================================================
+  async function connectWallet() {
+    if (!window.ethereum) {
+      showToast('No wallet found. Install OKX Wallet or MetaMask.', 'error');
+      return;
+    }
+
+    try {
+      const btn = document.getElementById('connectBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="btn-spinner"></span> Connecting...';
+
+      // Load ethers from CDN
+      if (!window.ethers) {
+        await loadEthers();
+      }
+
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      userAddress = accounts[0];
+
+      provider = new ethers.BrowserProvider(window.ethereum);
+      signer = await provider.getSigner();
+
+      await checkNetwork();
+      await updateWalletUI();
+
+      isConnected = true;
+      updateSendButton();
+
+      // Listen for account/chain changes
+      window.ethereum.on('accountsChanged', handleAccountChange);
+      window.ethereum.on('chainChanged', handleChainChange);
+
+      showToast('Wallet connected!', 'success');
+
+    } catch (err) {
+      console.error(err);
+      showToast(err.code === 4001 ? 'Connection rejected.' : 'Connection failed.', 'error');
+      document.getElementById('connectBtn').disabled = false;
+      document.getElementById('connectBtn').innerHTML = '⚡ Connect Wallet';
+    }
+  }
+
+  function loadEthers() {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js';
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+
+  async function updateWalletUI() {
+    const shortAddr = userAddress.slice(0,6) + '...' + userAddress.slice(-4);
+    document.getElementById('walletAddress').textContent = shortAddr;
+
+    document.getElementById('connectBtn').style.display = 'none';
+    document.getElementById('walletInfo').classList.add('visible');
+
+    // Get USDC balance
+    try {
+      const contract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider);
+      const decimals = await contract.decimals();
+      const raw = await contract.balanceOf(userAddress);
+      const bal = ethers.formatUnits(raw, decimals);
+      document.getElementById('walletBalance').textContent =
+        'Balance: ' + parseFloat(bal).toFixed(2) + ' USDC';
+    } catch {
+      document.getElementById('walletBalance').textContent = 'Balance: — USDC';
+    }
+  }
+
+  function disconnectWallet() {
+    userAddress = null;
+    isConnected = false;
+    isCorrectNetwork = false;
+    provider = null;
+    signer = null;
+
+    document.getElementById('connectBtn').style.display = 'block';
+    document.getElementById('connectBtn').disabled = false;
+    document.getElementById('connectBtn').innerHTML = '⚡ Connect Wallet';
+    document.getElementById('walletInfo').classList.remove('visible');
+    document.getElementById('networkWarning').classList.remove('visible');
+
+    clearStatus();
+    updateSendButton();
+    showToast('Disconnected.', '');
+  }
+
+  // ============================================================
+  // NETWORK
+  // ============================================================
+  async function checkNetwork() {
+    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+    isCorrectNetwork = chainId === ARC_CHAIN_ID;
+    document.getElementById('networkWarning').classList.toggle('visible', !isCorrectNetwork);
+    return isCorrectNetwork;
+  }
+
+  async function switchToArc() {
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: ARC_CHAIN_ID }]
+      });
+    } catch (err) {
+      if (err.code === 4902) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [ARC_NETWORK]
+          });
+        } catch (addErr) {
+          showToast('Could not add Arc Testnet. Add manually.', 'error');
+        }
+      }
+    }
+  }
+
+  function handleChainChange(chainId) {
+    isCorrectNetwork = chainId === ARC_CHAIN_ID;
+    document.getElementById('networkWarning').classList.toggle('visible', !isCorrectNetwork);
+    updateSendButton();
+    if (isConnected) updateWalletUI();
+  }
+
+  function handleAccountChange(accounts) {
+    if (accounts.length === 0) {
+      disconnectWallet();
+    } else {
+      userAddress = accounts[0];
+      updateWalletUI();
+    }
+  }
+
+  // ============================================================
+  // SEND PAYMENT
+  // ============================================================
+  async function sendPayment() {
+    const to = document.getElementById('recipient').value.trim();
+    const amount = document.getElementById('amount').value.trim();
+    const memo = document.getElementById('memo').value.trim();
+
+    // Validate
+    if (!to || !ethers.isAddress(to)) {
+      showToast('Enter a valid wallet address.', 'error');
+      return;
+    }
+    if (!amount || parseFloat(amount) <= 0) {
+      showToast('Enter a valid amount.', 'error');
+      return;
+    }
+    if (!(await checkNetwork())) {
+      showToast('Switch to Arc Testnet first.', 'error');
+      return;
+    }
+
+    try {
+      const btn = document.getElementById('sendBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="btn-spinner"></span> Sending...';
+
+      showStatus('pending', '⏳', 'Transaction Pending',
+        memo
+          ? `Sending ${amount} USDC${memo ? ' · "' + memo + '"' : ''}. Confirm in your wallet...`
+          : `Sending ${amount} USDC. Confirm in your wallet...`
+      );
+
+      const contract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer);
+      const decimals = await contract.decimals();
+      const parsedAmount = ethers.parseUnits(amount, decimals);
+
+      const tx = await contract.transfer(to, parsedAmount);
+
+      showStatus('pending', '🔄', 'Broadcasting...', `TX: ${tx.hash}`);
+
+      const receipt = await tx.wait();
+
+      showStatus('success', '✅', 'Payment Sent!',
+        `${amount} USDC sent successfully.\nTX: ${tx.hash}`,
+        tx.hash
+      );
+
+      await updateWalletUI();
+      showToast(`${amount} USDC sent!`, 'success');
+
+      // Reset form
+      document.getElementById('recipient').value = '';
+      document.getElementById('amount').value = '';
+      document.getElementById('memo').value = '';
+      document.getElementById('summary').style.display = 'none';
+
+    } catch (err) {
+      console.error(err);
+      const msg = err.code === 4001 ? 'Transaction rejected by user.'
+        : err.code === 'INSUFFICIENT_FUNDS' ? 'Insufficient USDC balance.'
+        : err.reason || err.message || 'Transaction failed.';
+      showStatus('error', '❌', 'Transaction Failed', msg);
+      showToast('Transaction failed.', 'error');
+    } finally {
+      updateSendButton();
+    }
+  }
+
+  // ============================================================
+  // UI HELPERS
+  // ============================================================
+  function setAmount(val) {
+    document.getElementById('amount').value = val;
+    updateSummary();
+  }
+
+  function updateSummary() {
+    const to = document.getElementById('recipient').value.trim();
+    const amount = document.getElementById('amount').value.trim();
+    const summary = document.getElementById('summary');
+
+    if (to && amount && parseFloat(amount) > 0) {
+      const shortTo = to.length > 10 ? to.slice(0,6) + '...' + to.slice(-4) : to;
+      document.getElementById('summaryTo').textContent = shortTo;
+      document.getElementById('summaryAmount').textContent = amount + ' USDC';
+      summary.style.display = 'block';
+    } else {
+      summary.style.display = 'none';
+    }
+  }
+
+  function updateSendButton() {
+    const btn = document.getElementById('sendBtn');
+    if (!isConnected) {
+      btn.disabled = true;
+      btn.textContent = 'Connect wallet to send';
+    } else if (!isCorrectNetwork) {
+      btn.disabled = true;
+      btn.textContent = 'Switch to Arc Testnet';
+    } else {
+      btn.disabled = false;
+      btn.textContent = '⚡ Send USDC';
+    }
+  }
+
+  function showStatus(type, icon, title, msg, txHash) {
+    const box = document.getElementById('statusBox');
+    box.className = 'status-box visible ' + type;
+    document.getElementById('statusIcon').textContent = icon;
+    document.getElementById('statusTitle').textContent = title;
+    document.getElementById('statusMsg').textContent = msg;
+
+    const linkWrap = document.getElementById('txLinkWrap');
+    if (txHash) {
+      linkWrap.innerHTML = `<a class="tx-link" href="https://testnet.arcscan.app/tx/${txHash}" target="_blank">
+        🔍 View on ArcScan
+      </a>`;
+    } else {
+      linkWrap.innerHTML = '';
+    }
+  }
+
+  function clearStatus() {
+    const box = document.getElementById('statusBox');
+    box.className = 'status-box';
+    document.getElementById('txLinkWrap').innerHTML = '';
+  }
+
+  function showToast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast ' + type;
+    setTimeout(() => t.classList.add('show'), 10);
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+</script>
+
+</body>
+</html>
